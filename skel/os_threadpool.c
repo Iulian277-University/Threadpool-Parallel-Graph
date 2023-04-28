@@ -23,10 +23,6 @@ os_task_t *task_create(void *arg, void (*f)(void *))
 /* Add a new task to threadpool task queue */
 void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
 {
-    // printf("Add task in queue\n");
-    // pthread_mutex_lock(&tp->taskLock);
-    // [TODO]: Check if `malloc` is thread-safe (if it is, use `pthread_mutex_lock` after `malloc`)
-
     // Create a new node and assign the given task `t`
     os_task_queue_t *new_node = (os_task_queue_t *) malloc(sizeof(os_task_queue_t));
     if (new_node == NULL) {
@@ -46,14 +42,6 @@ void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
         new_node->next = tp->tasks;
         tp->tasks = new_node;
     }
-
-    // printf("Added task in queue\n");
-    // os_task_queue_t *head = tp->tasks;
-    // while (head != NULL) {
-    //     printf("%p -> ", head->task);
-    //     head = head->next;
-    // }
-    // printf("NULL\n");
 
     pthread_mutex_unlock(&tp->taskLock);
 }
@@ -77,7 +65,6 @@ os_task_t *get_task(os_threadpool_t *tp)
     tp->tasks = tp->tasks->next;
     free(head);
 
-    // printf("Get task from queue :: %p\n", task);
     pthread_mutex_unlock(&tp->taskLock);
 
     return task;
@@ -140,7 +127,6 @@ os_threadpool_t *threadpool_create(unsigned int nTasks, unsigned int nThreads)
             free(tp->threads);
             return NULL;
         } 
-        // printf("Thread #%d created\n", i);
     }
 
     return tp;
@@ -182,5 +168,16 @@ void threadpool_stop(os_threadpool_t *tp, int (*processingIsDone)(os_threadpool_
     for (unsigned int i = 0; i < tp->num_threads; i++)
         pthread_join(tp->threads[i], NULL);
 
+    os_task_queue_t *curr_node = tp->tasks;
+    while (curr_node != NULL) {
+        os_task_queue_t *tmp = curr_node;
+        curr_node = curr_node->next;
+        free(tmp->task->argument);
+        free(tmp->task);
+        free(tmp);
+    }
+
+    free(tp->threads);
     pthread_mutex_destroy(&tp->taskLock);
+    free(tp);
 }
