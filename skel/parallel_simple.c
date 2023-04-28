@@ -9,13 +9,13 @@
 #include "os_list.h"
 
 #define MAX_TASK 10
-#define MAX_THREAD 2
+#define MAX_THREAD 4
 
-void print_numbers(void *arg)
+void print_number(void *arg)
 {
     int n = *(int *)arg;
     printf("Number: %d\n", n);
-    // fflush(stdout);
+    fflush(stdout);
 }
 
 int test_processing_done(os_threadpool_t *tp)
@@ -31,10 +31,21 @@ void test_threadpool()
         return;
     }
 
-    for (int i = 1; i <= MAX_TASK; i++) {
-        os_task_t *t = task_create(&i, &print_numbers);
+    int v[MAX_TASK] = {0};
+    for (int i = 0; i < MAX_TASK; i++) {
+        v[i] = i;
+        os_task_t *t = task_create((void *) &v[i], &print_number);
         add_task_in_queue(tp, t);
     }
+
+    // Print remaining thread pool tasks
+    os_task_queue_t *head = tp->tasks;
+    while (head != NULL) {
+        printf("%p -> ", head->task);
+        head = head->next;
+    }
+    printf("NULL\n");
+    fflush(stdout);
 
     // threadpool_stop(tp, test_processing_done);
 }
