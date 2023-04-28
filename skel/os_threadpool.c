@@ -24,7 +24,7 @@ os_task_t *task_create(void *arg, void (*f)(void *))
 void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
 {
     // printf("Add task in queue\n");
-    pthread_mutex_lock(&tp->taskLock);
+    // pthread_mutex_lock(&tp->taskLock);
     // [TODO]: Check if `malloc` is thread-safe (if it is, use `pthread_mutex_lock` after `malloc`)
 
     // Create a new node and assign the given task `t`
@@ -35,7 +35,7 @@ void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
         return;
     }
 
-    // pthread_mutex_lock(&tp->taskLock);
+    pthread_mutex_lock(&tp->taskLock);
     new_node->task = t;
     new_node->next = NULL;
 
@@ -152,10 +152,11 @@ void *thread_loop_function(void *args)
     os_threadpool_t *tp = (os_threadpool_t *) args;
 
     while (1) {
-        os_task_t *task = NULL;
-        while (tp->tasks == NULL) {}
         if (tp->should_stop)
             break;
+
+        os_task_t *task = NULL;
+        while (tp->tasks == NULL && !tp->should_stop) {}
             
         task = get_task(tp);
 
@@ -166,6 +167,7 @@ void *thread_loop_function(void *args)
             f(arg);
         }
         pthread_mutex_unlock(&tp->taskLock);
+
     }
 
     pthread_exit(NULL);
@@ -174,24 +176,11 @@ void *thread_loop_function(void *args)
 /* Stop the thread pool once a condition is met */
 void threadpool_stop(os_threadpool_t *tp, int (*processingIsDone)(os_threadpool_t *))
 {
+    while (!processingIsDone(tp)) {}
+
     tp->should_stop = 1;
-
-    while (!processingIsDone(tp))
-        usleep(10000);
-
     for (unsigned int i = 0; i < tp->num_threads; i++)
         pthread_join(tp->threads[i], NULL);
 
-    os_task_queue_t *curr_node = tp->tasks;
-    while (curr_node != NULL) {
-        os_task_queue_t *tmp = curr_node;
-        curr_node = curr_node->next;
-        free(tmp->task->argument);
-        free(tmp->task);
-        free(tmp);
-    }
-
-    free(tp->threads);
     pthread_mutex_destroy(&tp->taskLock);
-    free(tp);
 }
