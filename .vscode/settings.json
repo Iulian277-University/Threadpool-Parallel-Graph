@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "os_list.h": "c"
-    }
+        "os_list.h": "c",
+        "stdio.h": "c",
+        "os_threadpool.h": "c"
+    },
+    "c.format.placeOpenBraceOnNewLineForControlBlocks": true, 
+    "c.format.placeOpenBraceOnNewLineForFunctions": true,
 }

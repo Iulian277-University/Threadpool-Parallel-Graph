@@ -34,4 +34,5 @@ $(BUILD_DIR)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -rf build serial parallel
+	rm -rf build serial parallel parallel_simple
+	rm -rf res.txt
