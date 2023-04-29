@@ -23,15 +23,10 @@ os_task_t *task_create(void *arg, void (*f)(void *))
 /* Add a new task to threadpool task queue */
 void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
 {
-    // printf("Add task in queue\n");
-    // pthread_mutex_lock(&tp->taskLock);
-    // [TODO]: Check if `malloc` is thread-safe (if it is, use `pthread_mutex_lock` after `malloc`)
-
     // Create a new node and assign the given task `t`
     os_task_queue_t *new_node = (os_task_queue_t *) malloc(sizeof(os_task_queue_t));
     if (new_node == NULL) {
         printf("[ERROR]: Can't allocate memory for task queue node `new_node`");
-        pthread_mutex_unlock(&tp->taskLock);
         return;
     }
 
@@ -47,14 +42,6 @@ void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
         tp->tasks = new_node;
     }
 
-    // printf("Added task in queue\n");
-    // os_task_queue_t *head = tp->tasks;
-    // while (head != NULL) {
-    //     printf("%p -> ", head->task);
-    //     head = head->next;
-    // }
-    // printf("NULL\n");
-
     pthread_mutex_unlock(&tp->taskLock);
 }
 
@@ -63,7 +50,7 @@ os_task_t *get_task(os_threadpool_t *tp)
 {
     pthread_mutex_lock(&tp->taskLock);
 
-    // Checkf if tasks' queue is empty
+    // Check if tasks' queue is empty
     if (tp->tasks == NULL) {
         pthread_mutex_unlock(&tp->taskLock);
         return NULL;
@@ -77,7 +64,6 @@ os_task_t *get_task(os_threadpool_t *tp)
     tp->tasks = tp->tasks->next;
     free(head);
 
-    // printf("Get task from queue :: %p\n", task);
     pthread_mutex_unlock(&tp->taskLock);
 
     return task;
@@ -134,13 +120,12 @@ os_threadpool_t *threadpool_create(unsigned int nTasks, unsigned int nThreads)
     for (unsigned int i = 0; i < nThreads; i++) {
         if (pthread_create(&tp->threads[i], NULL, thread_loop_function, (void *) tp) != 0) {
             printf("[ERROR]: Can't create thread #%d", i);
-            // for (unsigned int j = 0; j < i; j++)
-                // pthread_cancel(tp->threads[j]);
+            for (unsigned int j = 0; j < i; j++)
+                pthread_cancel(tp->threads[j]);
             pthread_mutex_destroy(&tp->taskLock);
             free(tp->threads);
             return NULL;
         } 
-        // printf("Thread #%d created\n", i);
     }
 
     return tp;
@@ -160,14 +145,11 @@ void *thread_loop_function(void *args)
             
         task = get_task(tp);
 
-        // pthread_mutex_lock(&tp->taskLock);
         if (task != NULL) {
             void *arg = task->argument;
             void (*f)(void *) = task->task;
             f(arg);
         }
-        // pthread_mutex_unlock(&tp->taskLock);
-
     }
 
     pthread_exit(NULL);
