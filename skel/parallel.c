@@ -60,9 +60,6 @@ void process_node(void *arg)
         // Start a new task for the neighbour and add it to the thread pool
         os_task_t *t = task_create((void *) neighbour_id, &process_node);
         add_task_in_queue(tp, t);
-
-        // Free the memory allocated for the neighbour id
-        free(neighbour_id);
     }
 }
 
@@ -105,7 +102,6 @@ int main(int argc, char *argv[])
         *node_id = i;
         os_task_t *t = task_create((void *) node_id, &process_node);
         add_task_in_queue(tp, t);
-        free(node_id);
     }
 
     // Wait for all the tasks to finish

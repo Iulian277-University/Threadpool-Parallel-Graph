@@ -8,12 +8,14 @@
 /* Creates a task that thread must execute */
 os_task_t *task_create(void *arg, void (*f)(void *))
 {
+    // Alloc memory for a new task
     os_task_t *t = (os_task_t *) malloc(sizeof(os_task_t));
     if (t == NULL) {
         printf("[ERROR]: Can't allocate memory for `task`");
         return NULL;
     }
 
+    // Extract the `arguments` and the `function`
     t->argument = arg;
     t->task = f;
 
@@ -23,13 +25,14 @@ os_task_t *task_create(void *arg, void (*f)(void *))
 /* Add a new task to threadpool task queue */
 void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
 {
-    // Create a new node and assign the given task `t`
+    // Create a new node in the queue
     os_task_queue_t *new_node = (os_task_queue_t *) malloc(sizeof(os_task_queue_t));
     if (new_node == NULL) {
         printf("[ERROR]: Can't allocate memory for task queue node `new_node`");
         return;
     }
 
+    // Set the nodes' task and next node
     pthread_mutex_lock(&tp->taskLock);
     new_node->task = t;
     new_node->next = NULL;
@@ -41,7 +44,6 @@ void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
         new_node->next = tp->tasks;
         tp->tasks = new_node;
     }
-
     pthread_mutex_unlock(&tp->taskLock);
 }
 
@@ -74,16 +76,20 @@ os_task_t *get_task(os_threadpool_t *tp)
 /* Wrapper of malloc */
 os_threadpool_t *_os_threadpool_create()
 {
+    // Alloc memory for a new threadpool
     os_threadpool_t *tp = (os_threadpool_t *) malloc(sizeof(os_threadpool_t));
     if (tp == NULL) {
         printf("[ERROR]: Can't allocate memory for `threadpool`");
         return NULL;
     }
 
+    // Set some default values
     tp->should_stop = 0;
     tp->num_threads = 0;
     tp->threads = NULL;
     tp->tasks = NULL;
+
+    // Initialize the `taskLock` mutex
     if (pthread_mutex_init(&tp->taskLock, NULL) != 0) {
         printf("[ERROR]: Can't initialize the `taskLock` mutex");
         free(tp);
@@ -102,12 +108,14 @@ os_threadpool_t *threadpool_create(unsigned int nTasks, unsigned int nThreads)
         return NULL;
     }
 
+    // Create a new threadpool using the `malloc`'s wrapper
     os_threadpool_t *tp = _os_threadpool_create();
     if (tp == NULL) {
         printf("[ERROR]: Can't create the `threadpool`");
         return NULL;
     }
 
+    // Set the number of threads and allocate memory for them
     tp->num_threads = nThreads;
     tp->threads = (pthread_t *) malloc(nThreads * sizeof(pthread_t));
     if (tp->threads == NULL) {
@@ -117,6 +125,7 @@ os_threadpool_t *threadpool_create(unsigned int nTasks, unsigned int nThreads)
         return NULL;
     }
 
+    // Create the threads
     for (unsigned int i = 0; i < nThreads; i++) {
         if (pthread_create(&tp->threads[i], NULL, thread_loop_function, (void *) tp) != 0) {
             printf("[ERROR]: Can't create thread #%d", i);
@@ -134,17 +143,23 @@ os_threadpool_t *threadpool_create(unsigned int nTasks, unsigned int nThreads)
 /* Loop function for threads */
 void *thread_loop_function(void *args)
 {
+    // Get the threadpool
     os_threadpool_t *tp = (os_threadpool_t *) args;
+    os_task_t *task = NULL;
 
+    // Loop until the threadpool is stopped
     while (1) {
+        // Check if the threadpool received a stop signal
         if (tp->should_stop)
             break;
 
-        os_task_t *task = NULL;
+        // Wait until a task is added to the queue
         while (tp->tasks == NULL && !tp->should_stop) {}
             
+        // Get a task from the queue
         task = get_task(tp);
 
+        // Execute the task
         if (task != NULL) {
             void *arg = task->argument;
             void (*f)(void *) = task->task;
@@ -158,11 +173,16 @@ void *thread_loop_function(void *args)
 /* Stop the thread pool once a condition is met */
 void threadpool_stop(os_threadpool_t *tp, int (*processingIsDone)(os_threadpool_t *))
 {
+    // Block until all stop signal is received
     while (!processingIsDone(tp)) {}
 
+    // Notify the threads that they should stop
     tp->should_stop = 1;
+
+    // Join all the worker threads
     for (unsigned int i = 0; i < tp->num_threads; i++)
         pthread_join(tp->threads[i], NULL);
 
+    // Destroy the mutex
     pthread_mutex_destroy(&tp->taskLock);
 }
