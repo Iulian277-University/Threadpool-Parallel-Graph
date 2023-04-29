@@ -160,13 +160,13 @@ void *thread_loop_function(void *args)
             
         task = get_task(tp);
 
-        pthread_mutex_lock(&tp->taskLock);
+        // pthread_mutex_lock(&tp->taskLock);
         if (task != NULL) {
             void *arg = task->argument;
             void (*f)(void *) = task->task;
             f(arg);
         }
-        pthread_mutex_unlock(&tp->taskLock);
+        // pthread_mutex_unlock(&tp->taskLock);
 
     }
 
