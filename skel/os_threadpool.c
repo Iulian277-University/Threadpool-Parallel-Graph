@@ -25,11 +25,7 @@ os_task_t *task_create(void *arg, void (*f)(void *))
 /* Add a new task to threadpool task queue */
 void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
 {
-<<<<<<< HEAD
     // Create a new node and assign the given task `t`
-=======
-    // Create a new node in the queue
->>>>>>> bothering-lock
     os_task_queue_t *new_node = (os_task_queue_t *) malloc(sizeof(os_task_queue_t));
     if (new_node == NULL) {
         printf("[ERROR]: Can't allocate memory for task queue node `new_node`");
@@ -48,10 +44,7 @@ void add_task_in_queue(os_threadpool_t *tp, os_task_t *t)
         new_node->next = tp->tasks;
         tp->tasks = new_node;
     }
-<<<<<<< HEAD
 
-=======
->>>>>>> bothering-lock
     pthread_mutex_unlock(&tp->taskLock);
 }
 
@@ -191,7 +184,6 @@ void threadpool_stop(os_threadpool_t *tp, int (*processingIsDone)(os_threadpool_
     for (unsigned int i = 0; i < tp->num_threads; i++)
         pthread_join(tp->threads[i], NULL);
 
-<<<<<<< HEAD
     os_task_queue_t *curr_node = tp->tasks;
     while (curr_node != NULL) {
         os_task_queue_t *tmp = curr_node;
@@ -202,9 +194,8 @@ void threadpool_stop(os_threadpool_t *tp, int (*processingIsDone)(os_threadpool_
     }
 
     free(tp->threads);
-=======
+    
     // Destroy the mutex
->>>>>>> bothering-lock
     pthread_mutex_destroy(&tp->taskLock);
     free(tp);
 }
